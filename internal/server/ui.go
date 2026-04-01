@@ -1,120 +1,44 @@
 package server
 
 var dashboardHTML = []byte(`<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stockyard Prairie</title>
-<style>
-  :root {
-    --bg: #1a1410;
-    --surface: #241c15;
-    --border: #3d2e1e;
-    --rust: #c4622d;
-    --leather: #8b5e3c;
-    --cream: #f5e6c8;
-    --muted: #7a6550;
-    --text: #e8d5b0;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono', monospace, sans-serif; min-height: 100vh; }
-  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; align-items: center; gap: 1rem; }
-  .logo { color: var(--rust); font-size: 1.25rem; font-weight: 700; letter-spacing: 0.05em; }
-  .badge { background: var(--rust); color: var(--cream); font-size: 0.65rem; padding: 0.2rem 0.5rem; border-radius: 3px; font-weight: 600; text-transform: uppercase; }
-  main { max-width: 960px; margin: 2rem auto; padding: 0 2rem; }
-  .hero { text-align: center; padding: 3rem 0 2rem; }
-  .hero h1 { font-size: 2rem; color: var(--cream); margin-bottom: 0.5rem; }
-  .hero p { color: var(--muted); font-size: 0.95rem; max-width: 480px; margin: 0 auto; }
-  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 2rem 0; }
-  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1.25rem; text-align: center; }
-  .stat-value { font-size: 1.75rem; font-weight: 700; color: var(--rust); }
-  .stat-label { font-size: 0.75rem; color: var(--muted); margin-top: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1.5rem; margin-bottom: 1rem; }
-  .card h2 { font-size: 1rem; color: var(--cream); margin-bottom: 1rem; }
-  .tier-box { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-  .tier { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 1rem; }
-  .tier.pro { border-color: var(--rust); }
-  .tier-name { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.5rem; }
-  .tier.pro .tier-name { color: var(--rust); }
-  .tier-desc { font-size: 0.85rem; color: var(--text); }
-  .tier-price { font-size: 0.8rem; color: var(--leather); margin-top: 0.5rem; }
-  footer { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.75rem; }
-  footer a { color: var(--leather); text-decoration: none; }
-  .endpoint-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-  .endpoint-table th { text-align: left; color: var(--muted); padding: 0.5rem; border-bottom: 1px solid var(--border); }
-  .endpoint-table td { padding: 0.5rem; border-bottom: 1px solid var(--border); color: var(--text); }
-  .method { color: var(--rust); font-weight: 600; }
-</style>
-</head>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Stockyard Prairie</title><style>:root{--bg:#1a1410;--surface:#241c15;--border:#3d2e1e;--rust:#c4622d;--cream:#f5e6c8;--muted:#7a6550;--text:#e8d5b0}*{box-sizing:border-box;margin:0;padding:0}body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace,sans-serif}header{background:var(--surface);border-bottom:1px solid var(--border);padding:1rem 2rem;display:flex;align-items:center;gap:1rem}.logo{color:var(--rust);font-size:1.25rem;font-weight:700}.badge{background:var(--rust);color:var(--cream);font-size:0.65rem;padding:0.2rem 0.5rem;border-radius:3px;font-weight:600;text-transform:uppercase}main{max-width:1100px;margin:0 auto;padding:2rem}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:2rem}.stat{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1.25rem;text-align:center}.stat-value{font-size:1.75rem;font-weight:700;color:var(--rust)}.stat-label{font-size:0.75rem;color:var(--muted);margin-top:0.25rem;text-transform:uppercase}.layout{display:grid;grid-template-columns:260px 1fr;gap:1rem}.card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1.5rem;margin-bottom:1rem}.card h2{font-size:0.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:1rem}.form-row{display:flex;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap}select,input{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:0.5rem 0.75rem;border-radius:4px;font-family:inherit;font-size:0.85rem;flex:1}.btn{background:var(--rust);color:var(--cream);border:none;padding:0.5rem 1rem;border-radius:4px;cursor:pointer;font-family:inherit;font-size:0.85rem;font-weight:600}.btn:hover{opacity:0.85}.btn-sm{padding:0.25rem 0.6rem;font-size:0.75rem}.btn-danger{background:#7a2020}.site-item{padding:0.5rem 0.75rem;cursor:pointer;border-radius:4px;margin-bottom:0.25rem}.site-item:hover,.site-item.active{background:rgba(196,98,45,0.15)}.site-item.active{border-left:3px solid var(--rust)}.snippet-box{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:0.75rem;font-size:0.72rem;color:var(--muted);word-break:break-all;font-family:monospace;margin-top:0.5rem}.big-num{font-size:2rem;font-weight:700;color:var(--rust)}.metric-row{display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid var(--border);font-size:0.82rem}.bar-wrap{background:var(--bg);border-radius:3px;height:6px;margin-top:4px}.bar-fill{background:var(--rust);height:100%;border-radius:3px}.sparkline-wrap{display:flex;align-items:flex-end;gap:2px;height:50px;margin:0.75rem 0}.spark-bar{background:var(--rust);border-radius:2px 2px 0 0;flex:1;min-width:3px;opacity:0.7}.spark-bar:hover{opacity:1}.empty{color:var(--muted);font-size:0.85rem;padding:1rem 0;text-align:center}.period-btns{display:flex;gap:0.3rem;margin-bottom:1rem}.period-btn{background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:0.3rem 0.6rem;border-radius:3px;cursor:pointer;font-size:0.78rem;font-family:inherit}.period-btn.active{background:var(--rust);color:var(--cream);border-color:var(--rust)}</style></head>
 <body>
-<header>
-  <span class="logo">⬡ Stockyard</span>
-  <span style="color:var(--muted);">/</span>
-  <span style="color:var(--cream);font-weight:600;">Prairie</span>
-  <span class="badge">v0.1.0</span>
-</header>
+<header><span class="logo">&#x2B21; Stockyard</span><span style="color:var(--muted)">/</span><span style="color:var(--cream);font-weight:600">Prairie</span><span class="badge">Analytics</span></header>
 <main>
-  <div class="hero">
-    <h1>Prairie</h1>
-    <p>Web analytics — one script tag, no cookies, GDPR compliant, page views, referrers, device breakdown</p>
-  </div>
-  <div class="stats">
-    <div class="stat">
-      <div class="stat-value" id="stat-items">—</div>
-      <div class="stat-label">Total Items</div>
-    </div>
-    <div class="stat">
-      <div class="stat-value">9340</div>
-      <div class="stat-label">Port</div>
-    </div>
-    <div class="stat">
-      <div class="stat-value" id="stat-tier">—</div>
-      <div class="stat-label">Tier</div>
-    </div>
-  </div>
-  <div class="card">
-    <h2>Tier &amp; Limits</h2>
-    <div class="tier-box">
-      <div class="tier">
-        <div class="tier-name">Free</div>
-        <div class="tier-desc">1 site, 10k pageviews/mo</div>
-        <div class="tier-price">$0/mo</div>
-      </div>
-      <div class="tier pro">
-        <div class="tier-name">Pro</div>
-        <div class="tier-desc">Unlimited sites and pageviews</div>
-        <div class="tier-price">$4.99/mo</div>
-      </div>
-    </div>
-  </div>
-  <div class="card">
-    <h2>API Endpoints</h2>
-    <table class="endpoint-table">
-      <thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
-      <tbody>
-        <tr><td class="method">GET</td><td>/health</td><td>Health check</td></tr>
-        <tr><td class="method">GET</td><td>/api/version</td><td>Version info</td></tr>
-        <tr><td class="method">GET</td><td>/api/limits</td><td>Current tier limits</td></tr>
-        <tr><td class="method">GET</td><td>/api/items</td><td>List items</td></tr>
-        <tr><td class="method">POST</td><td>/api/items</td><td>Create item</td></tr>
-        <tr><td class="method">GET</td><td>/api/items/{id}</td><td>Get item</td></tr>
-        <tr><td class="method">PUT</td><td>/api/items/{id}</td><td>Update item</td></tr>
-        <tr><td class="method">DELETE</td><td>/api/items/{id}</td><td>Delete item</td></tr>
-      </tbody>
-    </table>
-  </div>
+<div class="stats"><div class="stat"><div class="stat-value" id="s1">0</div><div class="stat-label">Total Events</div></div><div class="stat"><div class="stat-value" id="s2">0</div><div class="stat-label">Sites</div></div><div class="stat"><div class="stat-value" id="s3">FREE</div><div class="stat-label">Tier</div></div></div>
+<div class="layout">
+<div>
+<div class="card"><h2>Add Site</h2>
+<div class="form-row"><input id="f-domain" placeholder="example.com"><button class="btn btn-sm" onclick="addSite()">Add</button></div>
+<div id="site-list"><div class="empty">No sites</div></div></div>
+</div>
+<div id="analytics-panel">
+<div class="card" style="display:none" id="no-site"><div class="empty" style="padding:2rem">Select a site to view analytics</div></div>
+<div id="site-analytics" style="display:none">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem"><h2 style="font-size:0.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin:0">Analytics: <span id="cur-domain" style="color:var(--cream)"></span></h2><div class="period-btns"><button class="period-btn active" onclick="setPeriod(7,this)">7d</button><button class="period-btn" onclick="setPeriod(30,this)">30d</button><button class="period-btn" onclick="setPeriod(90,this)">90d</button></div></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+<div class="card" style="margin:0"><div style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;margin-bottom:0.5rem">Page Views</div><div class="big-num" id="m-views">0</div></div>
+<div class="card" style="margin:0"><div style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;margin-bottom:0.5rem">Unique Visitors</div><div class="big-num" id="m-uniq">0</div></div>
+</div>
+<div class="card" style="margin-bottom:1rem"><h2>Views Over Time</h2><div class="sparkline-wrap" id="sparkline"><div class="empty">No data</div></div></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+<div class="card" style="margin:0"><h2>Top Pages</h2><div id="top-pages"><div class="empty">No data</div></div></div>
+<div class="card" style="margin:0"><h2>Top Referrers</h2><div id="top-refs"><div class="empty">No data</div></div></div>
+</div>
+<div class="card" style="margin-top:1rem"><h2>Tracking Snippet</h2><div class="snippet-box" id="snippet-box">Select a site to see the snippet</div></div>
+</div>
+</div>
+</div>
 </main>
-<footer>
-  <a href="https://stockyard.dev">stockyard.dev</a> &mdash; Creator & Small Business &mdash; Apache 2.0
-</footer>
 <script>
-fetch('/api/limits').then(r=>r.json()).then(d=>{
-  document.getElementById('stat-tier').textContent = d.tier.toUpperCase();
-});
-fetch('/api/items').then(r=>r.json()).then(d=>{
-  document.getElementById('stat-items').textContent = Array.isArray(d) ? d.length : '0';
-});
-</script>
-</body>
-</html>`)
+var curSite=null;var curPeriod=7;
+function load(){fetch('/api/stats').then(function(r){return r.json()}).then(function(d){document.getElementById('s1').textContent=d.total_views||0})}
+function loadSites(){fetch('/api/sites').then(function(r){return r.json()}).then(function(list){document.getElementById('s2').textContent=list.length;var el=document.getElementById('site-list');el.innerHTML=list.length?list.map(function(s){return'<div class="site-item'+(curSite===s.id?' active':'')+'" onclick="selectSite('+s.id+',\''+s.domain+'\',\''+s.token+'\')"><div style="display:flex;justify-content:space-between">'+s.domain+'<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();delSite('+s.id+')">x</button></div></div>'}).join(''):'<div class="empty">No sites</div>'})}
+function selectSite(id,domain,token){curSite=id;document.getElementById('cur-domain').textContent=domain;document.getElementById('no-site').style.display='none';document.getElementById('site-analytics').style.display='block';var host=window.location.origin;document.getElementById('snippet-box').textContent='<img src="'+host+'/track?t='+token+'&p="+encodeURIComponent(location.pathname) style="display:none">';loadAnalytics();loadSites()}
+function setPeriod(days,btn){curPeriod=days;document.querySelectorAll('.period-btn').forEach(function(b){b.classList.remove('active')});if(btn)btn.classList.add('active');if(curSite)loadAnalytics()}
+function loadAnalytics(){if(!curSite)return;fetch('/api/sites/'+curSite+'/summary?days='+curPeriod).then(function(r){return r.json()}).then(function(d){document.getElementById('m-views').textContent=d.total_views||0;document.getElementById('m-uniq').textContent=d.unique_visitors||0;var pg=document.getElementById('top-pages');var pages=d.top_pages||[];var maxP=pages.length?pages[0].views:1;pg.innerHTML=pages.length?pages.map(function(p){return'<div class="metric-row"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px">'+p.path+'</span><span style="color:var(--rust)">'+p.views+'</span></div>'}).join(''):'<div class="empty">No data</div>';var rf=document.getElementById('top-refs');var refs=d.top_referrers||[];rf.innerHTML=refs.length?refs.map(function(r){return'<div class="metric-row"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px">'+r.referrer+'</span><span style="color:var(--rust)">'+r.views+'</span></div>'}).join(''):'<div class="empty">No referrer data</div>';load()});fetch('/api/sites/'+curSite+'/sparkline?days='+curPeriod).then(function(r){return r.json()}).then(function(data){var el=document.getElementById('sparkline');if(!data.length){el.innerHTML='<div class="empty">No data yet. Add the tracking snippet to your site.</div>';return};var max=Math.max.apply(null,data.map(function(d){return d.views}));el.innerHTML=data.map(function(d){var h=max>0?Math.round((d.views/max)*100):2;return'<div class="spark-bar" style="height:'+Math.max(h,4)+'%" title="'+d.date+': '+d.views+' views"></div>'}).join('')})}
+function addSite(){var d=document.getElementById('f-domain').value.trim();if(!d)return;fetch('/api/sites',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain:d})}).then(function(){document.getElementById('f-domain').value='';loadSites();load()})}
+function delSite(id){fetch('/api/sites/'+id,{method:'DELETE'}).then(function(){if(curSite===id){curSite=null;document.getElementById('site-analytics').style.display='none'};loadSites();load()})}
+document.getElementById('no-site').style.display='block';
+load();loadSites();
+</script></body></html>`)

@@ -1,60 +1,9 @@
 package server
-
-import (
-	"encoding/json"
-	"net/http"
-	"strconv"
-)
-
-type Item struct {
-	ID        int64  `json:"id"`
-	Name      string `json:"name"`
-	CreatedAt string `json:"created_at"`
-}
-
-func (s *Server) handleListItems(w http.ResponseWriter, r *http.Request) {
-	// List items — tool-specific query would go here
-	writeJSON(w, http.StatusOK, []Item{})
-}
-
-func (s *Server) handleCreateItem(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Name string `json:"name"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request")
-		return
-	}
-	if req.Name == "" {
-		writeError(w, http.StatusBadRequest, "name required")
-		return
-	}
-	writeJSON(w, http.StatusCreated, map[string]string{"status": "created", "name": req.Name})
-}
-
-func (s *Server) handleGetItem(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid id")
-		return
-	}
-	writeJSON(w, http.StatusOK, Item{ID: id})
-}
-
-func (s *Server) handleUpdateItem(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{"status": "updated"})
-}
-
-func (s *Server) handleDeleteItem(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
-}
-
-func (s *Server) handleUI(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
-	}
-	w.Header().Set("Content-Type", "text/html")
-	w.Write(dashboardHTML)
-}
+import("encoding/json";"net/http";"strconv";"strings";"github.com/stockyard-dev/stockyard-prairie/internal/store")
+func(s *Server)handleListSites(w http.ResponseWriter,r *http.Request){list,_:=s.db.ListSites();if list==nil{list=[]store.Site{}};writeJSON(w,200,list)}
+func(s *Server)handleCreateSite(w http.ResponseWriter,r *http.Request){var site store.Site;json.NewDecoder(r.Body).Decode(&site);if site.Domain==""{writeError(w,400,"domain required");return};if err:=s.db.CreateSite(&site);err!=nil{writeError(w,500,err.Error());return};writeJSON(w,201,site)}
+func(s *Server)handleDeleteSite(w http.ResponseWriter,r *http.Request){id,_:=strconv.ParseInt(r.PathValue("id"),10,64);s.db.DeleteSite(id);writeJSON(w,200,map[string]string{"status":"deleted"})}
+func(s *Server)handleTrack(w http.ResponseWriter,r *http.Request){token:=r.URL.Query().Get("t");if token==""{writeError(w,400,"t required");return};site,err:=s.db.FindSiteByToken(token);if err!=nil{writeError(w,403,"invalid token");return};path:=r.URL.Query().Get("p");if path==""{path="/"};ref:=r.Header.Get("Referer");ua:=r.Header.Get("User-Agent");ip:=r.RemoteAddr;if i:=strings.LastIndex(ip,":");i>=0{ip=ip[:i]};s.db.Track(site.ID,path,ref,ua,ip);w.Header().Set("Content-Type","image/gif");w.Header().Set("Cache-Control","no-store");w.Write([]byte("\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff\x21\xf9\x04\x00\x00\x00\x00\x00\x2c\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02\x44\x01\x00\x3b"))}
+func(s *Server)handleSummary(w http.ResponseWriter,r *http.Request){id,_:=strconv.ParseInt(r.PathValue("id"),10,64);days,_:=strconv.Atoi(r.URL.Query().Get("days"));if days==0{days=30};m,_:=s.db.Summary(id,days);writeJSON(w,200,m)}
+func(s *Server)handleSparkline(w http.ResponseWriter,r *http.Request){id,_:=strconv.ParseInt(r.PathValue("id"),10,64);days,_:=strconv.Atoi(r.URL.Query().Get("days"));if days==0{days=30};data,_:=s.db.Sparkline(int(id),days);writeJSON(w,200,data)}
+func(s *Server)handleStats(w http.ResponseWriter,r *http.Request){n,_:=s.db.TotalViews();writeJSON(w,200,map[string]interface{}{"total_views":n})}

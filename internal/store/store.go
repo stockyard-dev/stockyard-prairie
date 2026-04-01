@@ -1,61 +1,18 @@
 package store
-
-import (
-	"database/sql"
-	"fmt"
-	"os"
-	"path/filepath"
-
-	_ "modernc.org/sqlite"
-)
-
-type DB struct {
-	*sql.DB
-}
-
-func Open(dataDir string) (*DB, error) {
-	if err := os.MkdirAll(dataDir, 0755); err != nil {
-		return nil, fmt.Errorf("mkdir: %w", err)
-	}
-	dsn := filepath.Join(dataDir, "prairie.db") + "?_journal_mode=WAL&_busy_timeout=5000"
-	db, err := sql.Open("sqlite", dsn)
-	if err != nil {
-		return nil, fmt.Errorf("open: %w", err)
-	}
-	db.SetMaxOpenConns(1)
-	if err := migrate(db); err != nil {
-		return nil, fmt.Errorf("migrate: %w", err)
-	}
-	return &DB{db}, nil
-}
-
-func migrate(db *sql.DB) error {
-	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS sites (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        domain TEXT NOT NULL UNIQUE,
-        api_key TEXT NOT NULL UNIQUE,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-     );
-     CREATE TABLE IF NOT EXISTS pageviews (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        site_id INTEGER NOT NULL,
-        path TEXT NOT NULL,
-        referrer TEXT,
-        user_agent TEXT,
-        device_type TEXT,
-        country TEXT,
-        session_id TEXT,
-        duration_seconds INTEGER,
-        occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP
-     );
-     CREATE TABLE IF NOT EXISTS goals (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        site_id INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        path TEXT NOT NULL,
-        conversions INTEGER DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-     );`)
-	return err
-}
+import("crypto/sha256";"database/sql";"encoding/hex";"fmt";"os";"path/filepath";"time";_ "modernc.org/sqlite")
+type DB struct{*sql.DB}
+type Site struct{ID int64 `json:"id"`;Domain string `json:"domain"`;Token string `json:"token"`;CreatedAt time.Time `json:"created_at"`}
+type PageView struct{ID int64 `json:"id"`;SiteID int64 `json:"site_id"`;Path string `json:"path"`;Referrer string `json:"referrer"`;UserAgent string `json:"user_agent"`;Country string `json:"country"`;CreatedAt time.Time `json:"created_at"`}
+type PathStat struct{Path string `json:"path"`;Views int `json:"views"`}
+type RefStat struct{Referrer string `json:"referrer"`;Views int `json:"views"`}
+func hashIP(ip string)string{h:=sha256.Sum256([]byte(ip));return hex.EncodeToString(h[:8])}
+func Open(dataDir string)(*DB,error){if err:=os.MkdirAll(dataDir,0755);err!=nil{return nil,fmt.Errorf("mkdir: %w",err)};dsn:=filepath.Join(dataDir,"prairie.db")+"?_journal_mode=WAL&_busy_timeout=5000";db,err:=sql.Open("sqlite",dsn);if err!=nil{return nil,fmt.Errorf("open: %w",err)};db.SetMaxOpenConns(1);if err:=migrate(db);err!=nil{return nil,fmt.Errorf("migrate: %w",err)};return &DB{db},nil}
+func migrate(db *sql.DB)error{_,err:=db.Exec(`CREATE TABLE IF NOT EXISTS sites(id INTEGER PRIMARY KEY AUTOINCREMENT,domain TEXT NOT NULL UNIQUE,token TEXT NOT NULL,created_at DATETIME DEFAULT CURRENT_TIMESTAMP);CREATE TABLE IF NOT EXISTS page_views(id INTEGER PRIMARY KEY AUTOINCREMENT,site_id INTEGER NOT NULL,path TEXT NOT NULL,referrer TEXT DEFAULT '',user_agent TEXT DEFAULT '',visitor_hash TEXT DEFAULT '',created_at DATETIME DEFAULT CURRENT_TIMESTAMP);CREATE INDEX IF NOT EXISTS pv_site ON page_views(site_id,created_at DESC);CREATE INDEX IF NOT EXISTS pv_path ON page_views(site_id,path);`);return err}
+func(db *DB)ListSites()([]Site,error){rows,err:=db.Query(`SELECT id,domain,token,created_at FROM sites ORDER BY domain`);if err!=nil{return nil,err};defer rows.Close();var out[]Site;for rows.Next(){var s Site;rows.Scan(&s.ID,&s.Domain,&s.Token,&s.CreatedAt);out=append(out,s)};return out,nil}
+func(db *DB)CreateSite(s *Site)error{if s.Token==""{s.Token=fmt.Sprintf("%x",time.Now().UnixNano())};res,err:=db.Exec(`INSERT INTO sites(domain,token)VALUES(?,?)`,s.Domain,s.Token);if err!=nil{return err};s.ID,_=res.LastInsertId();return nil}
+func(db *DB)DeleteSite(id int64)error{_,err:=db.Exec(`DELETE FROM sites WHERE id=?`,id);_,_=db.Exec(`DELETE FROM page_views WHERE site_id=?`,id);return err}
+func(db *DB)FindSiteByToken(token string)(*Site,error){s:=&Site{};err:=db.QueryRow(`SELECT id,domain,token,created_at FROM sites WHERE token=?`,token).Scan(&s.ID,&s.Domain,&s.Token,&s.CreatedAt);if err!=nil{return nil,err};return s,nil}
+func(db *DB)Track(siteID int64,path,referrer,ua,ip string){hash:=hashIP(ip);db.Exec(`INSERT INTO page_views(site_id,path,referrer,user_agent,visitor_hash)VALUES(?,?,?,?,?)`,siteID,path,referrer,ua,hash)}
+func(db *DB)Summary(siteID int64,days int)(map[string]interface{},error){since:=time.Now().AddDate(0,0,-days).Format("2006-01-02");var total,unique int;db.QueryRow(`SELECT COUNT(*),COUNT(DISTINCT visitor_hash) FROM page_views WHERE site_id=? AND created_at>=?`,siteID,since).Scan(&total,&unique);rows,_:=db.Query(`SELECT path,COUNT(*) FROM page_views WHERE site_id=? AND created_at>=? GROUP BY path ORDER BY COUNT(*) DESC LIMIT 10`,siteID,since);var paths[]PathStat;if rows!=nil{defer rows.Close();for rows.Next(){var p PathStat;rows.Scan(&p.Path,&p.Views);paths=append(paths,p)}};rows2,_:=db.Query(`SELECT referrer,COUNT(*) FROM page_views WHERE site_id=? AND created_at>=? AND referrer!='' GROUP BY referrer ORDER BY COUNT(*) DESC LIMIT 10`,siteID,since);var refs[]RefStat;if rows2!=nil{defer rows2.Close();for rows2.Next(){var r RefStat;rows2.Scan(&r.Referrer,&r.Views);refs=append(refs,r)}};if paths==nil{paths=[]PathStat{}};if refs==nil{refs=[]RefStat{}};return map[string]interface{}{"total_views":total,"unique_visitors":unique,"top_pages":paths,"top_referrers":refs,"days":days},nil}
+func(db *DB)Sparkline(siteID,days int)([]map[string]interface{},error){rows,err:=db.Query(`SELECT date(created_at),COUNT(*) FROM page_views WHERE site_id=? AND created_at>=date('now','-'||?||' days') GROUP BY date(created_at) ORDER BY date(created_at)`,siteID,days);if err!=nil{return nil,err};defer rows.Close();var out[]map[string]interface{};for rows.Next(){var d string;var n int;rows.Scan(&d,&n);out=append(out,map[string]interface{}{"date":d,"views":n})};if out==nil{out=[]map[string]interface{}{}};return out,nil}
+func(db *DB)TotalViews()(int,error){var n int;db.QueryRow(`SELECT COUNT(*) FROM page_views`).Scan(&n);return n,nil}
