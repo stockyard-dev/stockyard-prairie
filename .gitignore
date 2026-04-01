@@ -1,0 +1,5 @@
+/prairie
+/data/
+*.db
+*.db-shm
+*.db-wal

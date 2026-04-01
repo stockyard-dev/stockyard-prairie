@@ -1,0 +1,15 @@
+version: '3.8'
+services:
+  prairie:
+    build: .
+    ports:
+      - "9340:9340"
+    environment:
+      - PORT=9340
+      - DATA_DIR=/data
+      - PRAIRIE_LICENSE_KEY=
+    volumes:
+      - prairie_data:/data
+    restart: unless-stopped
+volumes:
+  prairie_data:
