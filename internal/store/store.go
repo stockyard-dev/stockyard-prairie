@@ -1,18 +1,31 @@
 package store
-import("crypto/sha256";"database/sql";"encoding/hex";"fmt";"os";"path/filepath";"time";_ "modernc.org/sqlite")
-type DB struct{*sql.DB}
-type Site struct{ID int64 `json:"id"`;Domain string `json:"domain"`;Token string `json:"token"`;CreatedAt time.Time `json:"created_at"`}
-type PageView struct{ID int64 `json:"id"`;SiteID int64 `json:"site_id"`;Path string `json:"path"`;Referrer string `json:"referrer"`;UserAgent string `json:"user_agent"`;Country string `json:"country"`;CreatedAt time.Time `json:"created_at"`}
-type PathStat struct{Path string `json:"path"`;Views int `json:"views"`}
-type RefStat struct{Referrer string `json:"referrer"`;Views int `json:"views"`}
-func hashIP(ip string)string{h:=sha256.Sum256([]byte(ip));return hex.EncodeToString(h[:8])}
-func Open(dataDir string)(*DB,error){if err:=os.MkdirAll(dataDir,0755);err!=nil{return nil,fmt.Errorf("mkdir: %w",err)};dsn:=filepath.Join(dataDir,"prairie.db")+"?_journal_mode=WAL&_busy_timeout=5000";db,err:=sql.Open("sqlite",dsn);if err!=nil{return nil,fmt.Errorf("open: %w",err)};db.SetMaxOpenConns(1);if err:=migrate(db);err!=nil{return nil,fmt.Errorf("migrate: %w",err)};return &DB{db},nil}
-func migrate(db *sql.DB)error{_,err:=db.Exec(`CREATE TABLE IF NOT EXISTS sites(id INTEGER PRIMARY KEY AUTOINCREMENT,domain TEXT NOT NULL UNIQUE,token TEXT NOT NULL,created_at DATETIME DEFAULT CURRENT_TIMESTAMP);CREATE TABLE IF NOT EXISTS page_views(id INTEGER PRIMARY KEY AUTOINCREMENT,site_id INTEGER NOT NULL,path TEXT NOT NULL,referrer TEXT DEFAULT '',user_agent TEXT DEFAULT '',visitor_hash TEXT DEFAULT '',created_at DATETIME DEFAULT CURRENT_TIMESTAMP);CREATE INDEX IF NOT EXISTS pv_site ON page_views(site_id,created_at DESC);CREATE INDEX IF NOT EXISTS pv_path ON page_views(site_id,path);`);return err}
-func(db *DB)ListSites()([]Site,error){rows,err:=db.Query(`SELECT id,domain,token,created_at FROM sites ORDER BY domain`);if err!=nil{return nil,err};defer rows.Close();var out[]Site;for rows.Next(){var s Site;rows.Scan(&s.ID,&s.Domain,&s.Token,&s.CreatedAt);out=append(out,s)};return out,nil}
-func(db *DB)CreateSite(s *Site)error{if s.Token==""{s.Token=fmt.Sprintf("%x",time.Now().UnixNano())};res,err:=db.Exec(`INSERT INTO sites(domain,token)VALUES(?,?)`,s.Domain,s.Token);if err!=nil{return err};s.ID,_=res.LastInsertId();return nil}
-func(db *DB)DeleteSite(id int64)error{_,err:=db.Exec(`DELETE FROM sites WHERE id=?`,id);_,_=db.Exec(`DELETE FROM page_views WHERE site_id=?`,id);return err}
-func(db *DB)FindSiteByToken(token string)(*Site,error){s:=&Site{};err:=db.QueryRow(`SELECT id,domain,token,created_at FROM sites WHERE token=?`,token).Scan(&s.ID,&s.Domain,&s.Token,&s.CreatedAt);if err!=nil{return nil,err};return s,nil}
-func(db *DB)Track(siteID int64,path,referrer,ua,ip string){hash:=hashIP(ip);db.Exec(`INSERT INTO page_views(site_id,path,referrer,user_agent,visitor_hash)VALUES(?,?,?,?,?)`,siteID,path,referrer,ua,hash)}
-func(db *DB)Summary(siteID int64,days int)(map[string]interface{},error){since:=time.Now().AddDate(0,0,-days).Format("2006-01-02");var total,unique int;db.QueryRow(`SELECT COUNT(*),COUNT(DISTINCT visitor_hash) FROM page_views WHERE site_id=? AND created_at>=?`,siteID,since).Scan(&total,&unique);rows,_:=db.Query(`SELECT path,COUNT(*) FROM page_views WHERE site_id=? AND created_at>=? GROUP BY path ORDER BY COUNT(*) DESC LIMIT 10`,siteID,since);var paths[]PathStat;if rows!=nil{defer rows.Close();for rows.Next(){var p PathStat;rows.Scan(&p.Path,&p.Views);paths=append(paths,p)}};rows2,_:=db.Query(`SELECT referrer,COUNT(*) FROM page_views WHERE site_id=? AND created_at>=? AND referrer!='' GROUP BY referrer ORDER BY COUNT(*) DESC LIMIT 10`,siteID,since);var refs[]RefStat;if rows2!=nil{defer rows2.Close();for rows2.Next(){var r RefStat;rows2.Scan(&r.Referrer,&r.Views);refs=append(refs,r)}};if paths==nil{paths=[]PathStat{}};if refs==nil{refs=[]RefStat{}};return map[string]interface{}{"total_views":total,"unique_visitors":unique,"top_pages":paths,"top_referrers":refs,"days":days},nil}
-func(db *DB)Sparkline(siteID,days int)([]map[string]interface{},error){rows,err:=db.Query(`SELECT date(created_at),COUNT(*) FROM page_views WHERE site_id=? AND created_at>=date('now','-'||?||' days') GROUP BY date(created_at) ORDER BY date(created_at)`,siteID,days);if err!=nil{return nil,err};defer rows.Close();var out[]map[string]interface{};for rows.Next(){var d string;var n int;rows.Scan(&d,&n);out=append(out,map[string]interface{}{"date":d,"views":n})};if out==nil{out=[]map[string]interface{}{}};return out,nil}
-func(db *DB)TotalViews()(int,error){var n int;db.QueryRow(`SELECT COUNT(*) FROM page_views`).Scan(&n);return n,nil}
+import ("database/sql";"encoding/json";"fmt";"os";"path/filepath";"time";_ "modernc.org/sqlite")
+type DB struct{db *sql.DB}
+type Board struct{ID string `json:"id"`;Name string `json:"name"`;Description string `json:"description,omitempty"`;Columns []string `json:"columns"`;CreatedAt string `json:"created_at"`;CardCount int `json:"card_count"`}
+type Card struct{ID string `json:"id"`;BoardID string `json:"board_id"`;Column string `json:"column"`;Title string `json:"title"`;Description string `json:"description,omitempty"`;Assignee string `json:"assignee,omitempty"`;Labels string `json:"labels,omitempty"`;Position int `json:"position"`;CreatedAt string `json:"created_at"`;UpdatedAt string `json:"updated_at"`}
+func Open(d string)(*DB,error){if err:=os.MkdirAll(d,0755);err!=nil{return nil,err};db,err:=sql.Open("sqlite",filepath.Join(d,"prairie.db")+"?_journal_mode=WAL&_busy_timeout=5000");if err!=nil{return nil,err}
+for _,q:=range[]string{
+`CREATE TABLE IF NOT EXISTS boards(id TEXT PRIMARY KEY,name TEXT NOT NULL,description TEXT DEFAULT '',columns_json TEXT DEFAULT '["Backlog","Todo","In Progress","Done"]',created_at TEXT DEFAULT(datetime('now')))`,
+`CREATE TABLE IF NOT EXISTS cards(id TEXT PRIMARY KEY,board_id TEXT NOT NULL,col TEXT DEFAULT 'Backlog',title TEXT NOT NULL,description TEXT DEFAULT '',assignee TEXT DEFAULT '',labels TEXT DEFAULT '',position INTEGER DEFAULT 0,created_at TEXT DEFAULT(datetime('now')),updated_at TEXT DEFAULT(datetime('now')))`,
+`CREATE INDEX IF NOT EXISTS idx_cards_board ON cards(board_id)`,
+}{if _,err:=db.Exec(q);err!=nil{return nil,fmt.Errorf("migrate: %w",err)}};return &DB{db:db},nil}
+func(d *DB)Close()error{return d.db.Close()}
+func genID()string{return fmt.Sprintf("%d",time.Now().UnixNano())}
+func now()string{return time.Now().UTC().Format(time.RFC3339)}
+func(d *DB)CreateBoard(b *Board)error{b.ID=genID();b.CreatedAt=now();if b.Columns==nil{b.Columns=[]string{"Backlog","Todo","In Progress","Done"}}
+cj,_:=json.Marshal(b.Columns);_,err:=d.db.Exec(`INSERT INTO boards VALUES(?,?,?,?,?)`,b.ID,b.Name,b.Description,string(cj),b.CreatedAt);return err}
+func(d *DB)GetBoard(id string)*Board{var b Board;var cj string;if d.db.QueryRow(`SELECT id,name,description,columns_json,created_at FROM boards WHERE id=?`,id).Scan(&b.ID,&b.Name,&b.Description,&cj,&b.CreatedAt)!=nil{return nil}
+json.Unmarshal([]byte(cj),&b.Columns);d.db.QueryRow(`SELECT COUNT(*) FROM cards WHERE board_id=?`,b.ID).Scan(&b.CardCount);return &b}
+func(d *DB)ListBoards()[]Board{rows,_:=d.db.Query(`SELECT id,name,description,columns_json,created_at FROM boards ORDER BY name`);if rows==nil{return nil};defer rows.Close()
+var o []Board;for rows.Next(){var b Board;var cj string;rows.Scan(&b.ID,&b.Name,&b.Description,&cj,&b.CreatedAt);json.Unmarshal([]byte(cj),&b.Columns);d.db.QueryRow(`SELECT COUNT(*) FROM cards WHERE board_id=?`,b.ID).Scan(&b.CardCount);o=append(o,b)};return o}
+func(d *DB)DeleteBoard(id string)error{d.db.Exec(`DELETE FROM cards WHERE board_id=?`,id);_,err:=d.db.Exec(`DELETE FROM boards WHERE id=?`,id);return err}
+func(d *DB)CreateCard(c *Card)error{c.ID=genID();c.CreatedAt=now();c.UpdatedAt=c.CreatedAt;if c.Column==""{c.Column="Backlog"}
+_,err:=d.db.Exec(`INSERT INTO cards(id,board_id,col,title,description,assignee,labels,position,created_at,updated_at)VALUES(?,?,?,?,?,?,?,?,?,?)`,c.ID,c.BoardID,c.Column,c.Title,c.Description,c.Assignee,c.Labels,c.Position,c.CreatedAt,c.UpdatedAt);return err}
+func(d *DB)GetCard(id string)*Card{var c Card;if d.db.QueryRow(`SELECT id,board_id,col,title,description,assignee,labels,position,created_at,updated_at FROM cards WHERE id=?`,id).Scan(&c.ID,&c.BoardID,&c.Column,&c.Title,&c.Description,&c.Assignee,&c.Labels,&c.Position,&c.CreatedAt,&c.UpdatedAt)!=nil{return nil};return &c}
+func(d *DB)ListCards(boardID string)[]Card{rows,_:=d.db.Query(`SELECT id,board_id,col,title,description,assignee,labels,position,created_at,updated_at FROM cards WHERE board_id=? ORDER BY position,created_at`,boardID);if rows==nil{return nil};defer rows.Close()
+var o []Card;for rows.Next(){var c Card;rows.Scan(&c.ID,&c.BoardID,&c.Column,&c.Title,&c.Description,&c.Assignee,&c.Labels,&c.Position,&c.CreatedAt,&c.UpdatedAt);o=append(o,c)};return o}
+func(d *DB)MoveCard(id,column string,position int)error{_,err:=d.db.Exec(`UPDATE cards SET col=?,position=?,updated_at=? WHERE id=?`,column,position,now(),id);return err}
+func(d *DB)UpdateCard(id string,c *Card)error{_,err:=d.db.Exec(`UPDATE cards SET title=?,description=?,assignee=?,labels=?,updated_at=? WHERE id=?`,c.Title,c.Description,c.Assignee,c.Labels,now(),id);return err}
+func(d *DB)DeleteCard(id string)error{_,err:=d.db.Exec(`DELETE FROM cards WHERE id=?`,id);return err}
+type Stats struct{Boards int `json:"boards"`;Cards int `json:"cards"`}
+func(d *DB)Stats()Stats{var s Stats;d.db.QueryRow(`SELECT COUNT(*) FROM boards`).Scan(&s.Boards);d.db.QueryRow(`SELECT COUNT(*) FROM cards`).Scan(&s.Cards);return s}

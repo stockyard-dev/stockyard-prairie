@@ -1,44 +1,65 @@
 package server
-
-var dashboardHTML = []byte(`<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Stockyard Prairie</title><style>:root{--bg:#1a1410;--surface:#241c15;--border:#3d2e1e;--rust:#c4622d;--cream:#f5e6c8;--muted:#7a6550;--text:#e8d5b0}*{box-sizing:border-box;margin:0;padding:0}body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace,sans-serif}header{background:var(--surface);border-bottom:1px solid var(--border);padding:1rem 2rem;display:flex;align-items:center;gap:1rem}.logo{color:var(--rust);font-size:1.25rem;font-weight:700}.badge{background:var(--rust);color:var(--cream);font-size:0.65rem;padding:0.2rem 0.5rem;border-radius:3px;font-weight:600;text-transform:uppercase}main{max-width:1100px;margin:0 auto;padding:2rem}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:2rem}.stat{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1.25rem;text-align:center}.stat-value{font-size:1.75rem;font-weight:700;color:var(--rust)}.stat-label{font-size:0.75rem;color:var(--muted);margin-top:0.25rem;text-transform:uppercase}.layout{display:grid;grid-template-columns:260px 1fr;gap:1rem}.card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1.5rem;margin-bottom:1rem}.card h2{font-size:0.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:1rem}.form-row{display:flex;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap}select,input{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:0.5rem 0.75rem;border-radius:4px;font-family:inherit;font-size:0.85rem;flex:1}.btn{background:var(--rust);color:var(--cream);border:none;padding:0.5rem 1rem;border-radius:4px;cursor:pointer;font-family:inherit;font-size:0.85rem;font-weight:600}.btn:hover{opacity:0.85}.btn-sm{padding:0.25rem 0.6rem;font-size:0.75rem}.btn-danger{background:#7a2020}.site-item{padding:0.5rem 0.75rem;cursor:pointer;border-radius:4px;margin-bottom:0.25rem}.site-item:hover,.site-item.active{background:rgba(196,98,45,0.15)}.site-item.active{border-left:3px solid var(--rust)}.snippet-box{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:0.75rem;font-size:0.72rem;color:var(--muted);word-break:break-all;font-family:monospace;margin-top:0.5rem}.big-num{font-size:2rem;font-weight:700;color:var(--rust)}.metric-row{display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid var(--border);font-size:0.82rem}.bar-wrap{background:var(--bg);border-radius:3px;height:6px;margin-top:4px}.bar-fill{background:var(--rust);height:100%;border-radius:3px}.sparkline-wrap{display:flex;align-items:flex-end;gap:2px;height:50px;margin:0.75rem 0}.spark-bar{background:var(--rust);border-radius:2px 2px 0 0;flex:1;min-width:3px;opacity:0.7}.spark-bar:hover{opacity:1}.empty{color:var(--muted);font-size:0.85rem;padding:1rem 0;text-align:center}.period-btns{display:flex;gap:0.3rem;margin-bottom:1rem}.period-btn{background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:0.3rem 0.6rem;border-radius:3px;cursor:pointer;font-size:0.78rem;font-family:inherit}.period-btn.active{background:var(--rust);color:var(--cream);border-color:var(--rust)}</style></head>
-<body>
-<header><span class="logo">&#x2B21; Stockyard</span><span style="color:var(--muted)">/</span><span style="color:var(--cream);font-weight:600">Prairie</span><span class="badge">Analytics</span></header>
-<main>
-<div class="stats"><div class="stat"><div class="stat-value" id="s1">0</div><div class="stat-label">Total Events</div></div><div class="stat"><div class="stat-value" id="s2">0</div><div class="stat-label">Sites</div></div><div class="stat"><div class="stat-value" id="s3">FREE</div><div class="stat-label">Tier</div></div></div>
-<div class="layout">
-<div>
-<div class="card"><h2>Add Site</h2>
-<div class="form-row"><input id="f-domain" placeholder="example.com"><button class="btn btn-sm" onclick="addSite()">Add</button></div>
-<div id="site-list"><div class="empty">No sites</div></div></div>
-</div>
-<div id="analytics-panel">
-<div class="card" style="display:none" id="no-site"><div class="empty" style="padding:2rem">Select a site to view analytics</div></div>
-<div id="site-analytics" style="display:none">
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem"><h2 style="font-size:0.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin:0">Analytics: <span id="cur-domain" style="color:var(--cream)"></span></h2><div class="period-btns"><button class="period-btn active" onclick="setPeriod(7,this)">7d</button><button class="period-btn" onclick="setPeriod(30,this)">30d</button><button class="period-btn" onclick="setPeriod(90,this)">90d</button></div></div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
-<div class="card" style="margin:0"><div style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;margin-bottom:0.5rem">Page Views</div><div class="big-num" id="m-views">0</div></div>
-<div class="card" style="margin:0"><div style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;margin-bottom:0.5rem">Unique Visitors</div><div class="big-num" id="m-uniq">0</div></div>
-</div>
-<div class="card" style="margin-bottom:1rem"><h2>Views Over Time</h2><div class="sparkline-wrap" id="sparkline"><div class="empty">No data</div></div></div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
-<div class="card" style="margin:0"><h2>Top Pages</h2><div id="top-pages"><div class="empty">No data</div></div></div>
-<div class="card" style="margin:0"><h2>Top Referrers</h2><div id="top-refs"><div class="empty">No data</div></div></div>
-</div>
-<div class="card" style="margin-top:1rem"><h2>Tracking Snippet</h2><div class="snippet-box" id="snippet-box">Select a site to see the snippet</div></div>
-</div>
-</div>
-</div>
-</main>
+import "net/http"
+func(s *Server)dashboard(w http.ResponseWriter,r *http.Request){w.Header().Set("Content-Type","text/html; charset=utf-8");w.Write([]byte(dashHTML))}
+const dashHTML=`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Prairie</title>
+<style>:root{--bg:#1a1410;--bg2:#241e18;--bg3:#2e261e;--rust:#c45d2c;--rl:#e8753a;--leather:#a0845c;--cream:#f0e6d3;--cd:#bfb5a3;--cm:#7a7060;--gold:#d4a843;--green:#4a9e5c;--blue:#4a7ec4;--mono:'JetBrains Mono',Consolas,monospace;--serif:'Libre Baskerville',Georgia,serif}*{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--cream);font-family:var(--mono);font-size:13px;line-height:1.6;height:100vh;overflow:hidden}
+.hdr{padding:.6rem 1.2rem;border-bottom:1px solid var(--bg3);display:flex;justify-content:space-between;align-items:center}.hdr h1{font-family:var(--serif);font-size:1rem}.hdr h1 span{color:var(--rl)}
+.hdr-right{display:flex;gap:.5rem;align-items:center}
+.btn{font-family:var(--mono);font-size:.68rem;padding:.3rem .6rem;border:1px solid;cursor:pointer;background:transparent}.btn-p{border-color:var(--rust);color:var(--rl)}.btn-p:hover{background:var(--rust);color:var(--cream)}
+.board{display:flex;gap:.6rem;padding:1rem;overflow-x:auto;height:calc(100vh - 45px)}
+.column{width:250px;flex-shrink:0;background:var(--bg2);border:1px solid var(--bg3);border-radius:4px;display:flex;flex-direction:column;max-height:100%}
+.col-hdr{padding:.5rem .6rem;border-bottom:1px solid var(--bg3);font-size:.75rem;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+.col-count{font-size:.6rem;color:var(--cm);font-weight:400}
+.col-cards{flex:1;overflow-y:auto;padding:.4rem}
+.card{background:var(--bg);border:1px solid var(--bg3);padding:.5rem;margin-bottom:.3rem;cursor:pointer;border-radius:3px;transition:.1s}.card:hover{border-color:var(--rust)}
+.card-title{font-size:.75rem;font-weight:600;margin-bottom:.15rem}
+.card-meta{font-size:.6rem;color:var(--cm);display:flex;gap:.4rem;flex-wrap:wrap}
+.card-label{font-size:.5rem;padding:.05rem .2rem;background:var(--bg3);color:var(--ll);border-radius:2px}
+.col-add{padding:.4rem .6rem;border-top:1px solid var(--bg3);text-align:center;font-size:.7rem;color:var(--cm);cursor:pointer}.col-add:hover{color:var(--rl)}
+.empty-state{display:flex;align-items:center;justify-content:center;height:calc(100vh - 45px);color:var(--cm);font-style:italic;font-family:var(--serif)}
+.modal-bg{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:100}
+.modal{background:var(--bg2);border:1px solid var(--bg3);padding:1.5rem;width:90%;max-width:450px}
+.modal h2{font-family:var(--serif);font-size:.9rem;margin-bottom:1rem}
+label.fl{display:block;font-size:.65rem;color:var(--leather);text-transform:uppercase;letter-spacing:1px;margin-bottom:.2rem;margin-top:.5rem}
+input[type=text],textarea,select{background:var(--bg);border:1px solid var(--bg3);color:var(--cream);padding:.35rem .5rem;font-family:var(--mono);font-size:.78rem;width:100%;outline:none}textarea{resize:vertical;min-height:60px}
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital@0;1&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+</head><body>
+<div class="hdr"><h1><span>Prairie</span></h1><div class="hdr-right"><select id="boardSelect" onchange="switchBoard(this.value)" style="background:var(--bg);border:1px solid var(--bg3);color:var(--cream);font-family:var(--mono);font-size:.72rem;padding:.25rem .4rem"></select><button class="btn btn-p" onclick="showNewBoard()">+ Board</button></div></div>
+<div id="content"><div class="empty-state">Select or create a board</div></div>
+<div id="modal"></div>
 <script>
-var curSite=null;var curPeriod=7;
-function load(){fetch('/api/stats').then(function(r){return r.json()}).then(function(d){document.getElementById('s1').textContent=d.total_views||0})}
-function loadSites(){fetch('/api/sites').then(function(r){return r.json()}).then(function(list){document.getElementById('s2').textContent=list.length;var el=document.getElementById('site-list');el.innerHTML=list.length?list.map(function(s){return'<div class="site-item'+(curSite===s.id?' active':'')+'" onclick="selectSite('+s.id+',\''+s.domain+'\',\''+s.token+'\')"><div style="display:flex;justify-content:space-between">'+s.domain+'<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();delSite('+s.id+')">x</button></div></div>'}).join(''):'<div class="empty">No sites</div>'})}
-function selectSite(id,domain,token){curSite=id;document.getElementById('cur-domain').textContent=domain;document.getElementById('no-site').style.display='none';document.getElementById('site-analytics').style.display='block';var host=window.location.origin;document.getElementById('snippet-box').textContent='<img src="'+host+'/track?t='+token+'&p="+encodeURIComponent(location.pathname) style="display:none">';loadAnalytics();loadSites()}
-function setPeriod(days,btn){curPeriod=days;document.querySelectorAll('.period-btn').forEach(function(b){b.classList.remove('active')});if(btn)btn.classList.add('active');if(curSite)loadAnalytics()}
-function loadAnalytics(){if(!curSite)return;fetch('/api/sites/'+curSite+'/summary?days='+curPeriod).then(function(r){return r.json()}).then(function(d){document.getElementById('m-views').textContent=d.total_views||0;document.getElementById('m-uniq').textContent=d.unique_visitors||0;var pg=document.getElementById('top-pages');var pages=d.top_pages||[];var maxP=pages.length?pages[0].views:1;pg.innerHTML=pages.length?pages.map(function(p){return'<div class="metric-row"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px">'+p.path+'</span><span style="color:var(--rust)">'+p.views+'</span></div>'}).join(''):'<div class="empty">No data</div>';var rf=document.getElementById('top-refs');var refs=d.top_referrers||[];rf.innerHTML=refs.length?refs.map(function(r){return'<div class="metric-row"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px">'+r.referrer+'</span><span style="color:var(--rust)">'+r.views+'</span></div>'}).join(''):'<div class="empty">No referrer data</div>';load()});fetch('/api/sites/'+curSite+'/sparkline?days='+curPeriod).then(function(r){return r.json()}).then(function(data){var el=document.getElementById('sparkline');if(!data.length){el.innerHTML='<div class="empty">No data yet. Add the tracking snippet to your site.</div>';return};var max=Math.max.apply(null,data.map(function(d){return d.views}));el.innerHTML=data.map(function(d){var h=max>0?Math.round((d.views/max)*100):2;return'<div class="spark-bar" style="height:'+Math.max(h,4)+'%" title="'+d.date+': '+d.views+' views"></div>'}).join('')})}
-function addSite(){var d=document.getElementById('f-domain').value.trim();if(!d)return;fetch('/api/sites',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain:d})}).then(function(){document.getElementById('f-domain').value='';loadSites();load()})}
-function delSite(id){fetch('/api/sites/'+id,{method:'DELETE'}).then(function(){if(curSite===id){curSite=null;document.getElementById('site-analytics').style.display='none'};loadSites();load()})}
-document.getElementById('no-site').style.display='block';
-load();loadSites();
-</script></body></html>`)
+let boards=[],curBoard='',cards=[];
+async function api(u,o){return(await fetch(u,o)).json()}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+async function init(){const d=await api('/api/boards');boards=d.boards||[];
+document.getElementById('boardSelect').innerHTML='<option value="">Select board</option>'+boards.map(b=>'<option value="'+b.id+'">'+esc(b.name)+' ('+b.card_count+')</option>').join('');
+if(curBoard)document.getElementById('boardSelect').value=curBoard}
+function switchBoard(id){curBoard=id;loadBoard()}
+async function loadBoard(){
+if(!curBoard){document.getElementById('content').innerHTML='<div class="empty-state">Select or create a board</div>';return}
+const[b,cd]=await Promise.all([api('/api/boards/'+curBoard),api('/api/boards/'+curBoard+'/cards')]);
+cards=cd.cards||[];const cols=b.columns||[];
+document.getElementById('content').innerHTML='<div class="board">'+cols.map(col=>{
+const colCards=cards.filter(c=>c.column===col);
+return '<div class="column"><div class="col-hdr">'+esc(col)+' <span class="col-count">'+colCards.length+'</span></div><div class="col-cards">'+
+colCards.map(c=>{
+const labels=(c.labels||'').split(',').filter(Boolean).map(l=>'<span class="card-label">'+esc(l.trim())+'</span>').join('');
+return '<div class="card" onclick="showCard(\''+c.id+'\')"><div class="card-title">'+esc(c.title)+'</div><div class="card-meta">'+(c.assignee?'<span>'+esc(c.assignee)+'</span>':'')+labels+'</div></div>'}).join('')+
+'</div><div class="col-add" onclick="addCard(\''+esc(col)+'\')">+ Add card</div></div>'}).join('')+'</div>'}
+function addCard(col){
+document.getElementById('modal').innerHTML='<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal"><h2>New Card</h2><label class="fl">Title</label><input type="text" id="nc-title"><label class="fl">Description</label><textarea id="nc-desc" rows="2"></textarea><label class="fl">Assignee</label><input type="text" id="nc-assign"><label class="fl">Labels (comma-separated)</label><input type="text" id="nc-labels"><div style="display:flex;gap:.5rem;margin-top:1rem"><button class="btn btn-p" onclick="saveCard(\''+esc(col)+'\')">Create</button><button class="btn" style="border-color:var(--bg3);color:var(--cm)" onclick="closeModal()">Cancel</button></div></div></div>'}
+async function saveCard(col){const b={board_id:curBoard,column:col,title:document.getElementById('nc-title').value,description:document.getElementById('nc-desc').value,assignee:document.getElementById('nc-assign').value,labels:document.getElementById('nc-labels').value};if(!b.title){alert('Title required');return};await api('/api/cards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});closeModal();loadBoard();init()}
+async function showCard(id){const c=await api('/api/cards/'+id+'?');if(!c||c.error)return;
+const board=boards.find(b=>b.id===curBoard);const cols=(board?board.columns:[])||[];
+const colOpts=cols.map(col=>'<option'+(col===c.column?' selected':'')+'>'+esc(col)+'</option>').join('');
+document.getElementById('modal').innerHTML='<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal"><h2>'+esc(c.title)+'</h2>'+(c.description?'<div style="padding:.4rem;background:var(--bg);border:1px solid var(--bg3);font-size:.78rem;color:var(--cd);margin-bottom:.5rem">'+esc(c.description)+'</div>':'')+
+'<label class="fl">Move to column</label><select id="mc-col">'+colOpts+'</select>'+
+'<div style="display:flex;gap:.3rem;margin-top:1rem"><button class="btn btn-p" onclick="move(\''+c.id+'\')">Move</button><button class="btn" style="border-color:var(--bg3);color:var(--cm)" onclick="if(confirm(\'Delete?\'))delCard(\''+c.id+'\')">Del</button><button class="btn" style="border-color:var(--bg3);color:var(--cm)" onclick="closeModal()">Close</button></div></div></div>'}
+async function move(id){const col=document.getElementById('mc-col').value;await api('/api/cards/'+id+'/move',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({column:col,position:0})});closeModal();loadBoard();init()}
+async function delCard(id){await api('/api/cards/'+id,{method:'DELETE'});closeModal();loadBoard();init()}
+function showNewBoard(){document.getElementById('modal').innerHTML='<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal"><h2>New Board</h2><label class="fl">Name</label><input type="text" id="nb-name"><label class="fl">Columns (comma-separated)</label><input type="text" id="nb-cols" value="Backlog, Todo, In Progress, Done"><div style="display:flex;gap:.5rem;margin-top:1rem"><button class="btn btn-p" onclick="saveBoard()">Create</button><button class="btn" style="border-color:var(--bg3);color:var(--cm)" onclick="closeModal()">Cancel</button></div></div></div>'}
+async function saveBoard(){const cols=(document.getElementById('nb-cols').value||'').split(',').map(s=>s.trim()).filter(Boolean);const b={name:document.getElementById('nb-name').value,columns:cols.length?cols:undefined};if(!b.name){alert('Name required');return};const r=await api('/api/boards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});curBoard=r.id;closeModal();init();loadBoard()}
+function closeModal(){document.getElementById('modal').innerHTML=''}
+init()
+</script></body></html>`
