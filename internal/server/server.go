@@ -5,7 +5,9 @@ func New(db *store.DB,limits Limits)*Server{s:=&Server{db:db,mux:http.NewServeMu
 s.mux.HandleFunc("GET /api/boards",s.listBoards);s.mux.HandleFunc("POST /api/boards",s.createBoard);s.mux.HandleFunc("GET /api/boards/{id}",s.getBoard);s.mux.HandleFunc("DELETE /api/boards/{id}",s.deleteBoard)
 s.mux.HandleFunc("GET /api/boards/{id}/cards",s.listCards);s.mux.HandleFunc("POST /api/cards",s.createCard);s.mux.HandleFunc("PUT /api/cards/{id}",s.updateCard);s.mux.HandleFunc("POST /api/cards/{id}/move",s.moveCard);s.mux.HandleFunc("DELETE /api/cards/{id}",s.deleteCard)
 s.mux.HandleFunc("GET /api/stats",s.stats);s.mux.HandleFunc("GET /api/health",s.health)
-s.mux.HandleFunc("GET /ui",s.dashboard);s.mux.HandleFunc("GET /ui/",s.dashboard);s.mux.HandleFunc("GET /",s.root);return s}
+s.mux.HandleFunc("GET /ui",s.dashboard);s.mux.HandleFunc("GET /ui/",s.dashboard);s.mux.HandleFunc("GET /",s.root);
+s.mux.HandleFunc("GET /api/tier",func(w http.ResponseWriter,r *http.Request){wj(w,200,map[string]any{"tier":s.limits.Tier,"upgrade_url":"https://stockyard.dev/prairie/"})})
+return s}
 func(s *Server)ServeHTTP(w http.ResponseWriter,r *http.Request){s.mux.ServeHTTP(w,r)}
 func wj(w http.ResponseWriter,c int,v any){w.Header().Set("Content-Type","application/json");w.WriteHeader(c);json.NewEncoder(w).Encode(v)}
 func we(w http.ResponseWriter,c int,m string){wj(w,c,map[string]string{"error":m})}

@@ -62,4 +62,5 @@ function showNewBoard(){document.getElementById('modal').innerHTML='<div class="
 async function saveBoard(){const cols=(document.getElementById('nb-cols').value||'').split(',').map(s=>s.trim()).filter(Boolean);const b={name:document.getElementById('nb-name').value,columns:cols.length?cols:undefined};if(!b.name){alert('Name required');return};const r=await api('/api/boards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});curBoard=r.id;closeModal();init();loadBoard()}
 function closeModal(){document.getElementById('modal').innerHTML=''}
 init()
+fetch('/api/tier').then(r=>r.json()).then(j=>{if(j.tier==='free'){var b=document.getElementById('upgrade-banner');if(b)b.style.display='block'}}).catch(()=>{var b=document.getElementById('upgrade-banner');if(b)b.style.display='block'});
 </script></body></html>`
